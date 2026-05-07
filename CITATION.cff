@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+title: "Final I-FLOP Algorithm Package"
+version: "0.1.0"
+message: "If you use this software, please cite the corresponding I-FLOP release and the FLOP work it extends."
+authors:
+  - name: "I-FLOP authors"
+license: "MPL-2.0"

@@ -1,0 +1,12 @@
+[package]
+name = "iflop_native"
+version = "0.1.0"
+edition = "2021"
+description = "Dependency-free Rust native core for final FLOP and I-FLOP-envwise methods"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[dependencies]

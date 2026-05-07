@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iflop-final"
+version = "0.1.0"
+description = "Python package and Rust native core for final FLOP and I-FLOP-envwise methods."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+license = {file = "LICENSE"}
+keywords = ["causal discovery", "DAGs", "I-FLOP", "FLOP", "structure learning"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+iflop_final = [
+    "py.typed",
+    "__init__.pyi",
+    "rust/iflop_native/Cargo.toml",
+    "rust/iflop_native/Cargo.lock",
+    "rust/iflop_native/src/main.rs",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
