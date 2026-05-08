@@ -10,7 +10,7 @@ from iflop_final.data.simulation import generate_linear_gaussian_dataset
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run a final I-FLOP smoke example.")
+    parser = argparse.ArgumentParser(description="Run an I-FLOP smoke example.")
     parser.add_argument("--method", choices=["flop_obs", "flop_envwise", "i_flop_envwise"], default="i_flop_envwise")
     parser.add_argument("--backend", choices=["rust", "python", "auto"], default="rust")
     parser.add_argument("--seed", type=int, default=0)

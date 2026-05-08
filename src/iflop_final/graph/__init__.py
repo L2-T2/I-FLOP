@@ -1,4 +1,4 @@
-"""Graph utilities for the final I-FLOP package."""
+"""Graph utilities for the I-FLOP package."""
 
 from iflop_final.graph.dag import (
     adjacency_from_parents,

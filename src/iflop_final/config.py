@@ -1,4 +1,4 @@
-"""Small configuration objects for final I-FLOP runs."""
+"""Small configuration objects for I-FLOP runs."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Score functions supported by the final I-FLOP package."""
+"""Score functions supported by the I-FLOP package."""
 
 from iflop_final.score.catalog import available_scores, make_scorer
 from iflop_final.score.gies_bic import GiesBICScorer

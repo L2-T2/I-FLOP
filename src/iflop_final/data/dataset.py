@@ -1,4 +1,4 @@
-"""Multi-environment dataset model for final I-FLOP algorithms."""
+"""Multi-environment dataset model for I-FLOP algorithms."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Minimal CSV/JSON loader for final I-FLOP datasets."""
+"""Minimal CSV/JSON loader for I-FLOP datasets."""
 
 from __future__ import annotations
 
@@ -51,4 +51,3 @@ def load_dataset_manifest(path: str | Path) -> MultiEnvDataset:
         true_dag=true_dag,
         metadata=metadata,
     )
-

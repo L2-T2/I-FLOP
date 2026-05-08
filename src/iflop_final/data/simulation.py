@@ -1,4 +1,4 @@
-"""Synthetic multi-environment generators for final I-FLOP experiments."""
+"""Synthetic multi-environment generators for I-FLOP experiments."""
 
 from __future__ import annotations
 
@@ -150,7 +150,7 @@ def generate_heterogeneity_dataset(
     intervention_strength: float = 2.5,
     seed: int = 0,
 ) -> MultiEnvDataset:
-    """Generate the Final Experiment 5.3 heterogeneity stress datasets.
+    """Generate the I-FLOP heterogeneity stress datasets.
 
     Regimes:
     - H0_homogeneous: baseline singleton interventions with homogeneous noise.

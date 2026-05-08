@@ -1,6 +1,7 @@
-"""Rust native backend bridge for final I-FLOP algorithms.
+"""Rust native backend bridge for I-FLOP algorithms.
 
-The native backend lives inside ``final-algorithm/rust/iflop_native`` and uses
+The native backend lives inside ``I-FLOP-main/rust/iflop_native`` or the
+packaged copy under ``src/iflop_final/rust/iflop_native`` and uses
 a small dependency-free text protocol. It is intentionally opt-in: importing
 this module never builds Rust code, while ``require_native_backend`` and the
 public wrapper functions build the binary on demand.

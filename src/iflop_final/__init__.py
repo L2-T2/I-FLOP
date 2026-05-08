@@ -1,4 +1,4 @@
-"""Final, self-contained I-FLOP algorithm package."""
+"""Self-contained I-FLOP algorithm package."""
 
 from iflop_final.api import (
     available_scores,

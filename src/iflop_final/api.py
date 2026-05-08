@@ -1,4 +1,4 @@
-"""Public Python API for the final I-FLOP algorithm package."""
+"""Public Python API for the I-FLOP algorithm package."""
 
 from __future__ import annotations
 
@@ -132,7 +132,7 @@ def run_iflop_envwise(
     penalty_sample_mode: str | None = None,
     backend: Backend = "rust",
 ) -> SearchResult:
-    """Run the final I-FLOP-envwise interventional extension.
+    """Run the I-FLOP-envwise interventional extension.
 
     This is the release-facing I-FLOP method: the FLOP order-search shell with
     node-wise effective environments and the envwise GIES-style local BIC score.

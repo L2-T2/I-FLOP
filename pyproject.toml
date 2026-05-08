@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "iflop-final"
 version = "0.1.0"
-description = "Python package and Rust native core for final FLOP and I-FLOP-envwise methods."
+description = "Python package and Rust native core for FLOP and I-FLOP-envwise methods."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]

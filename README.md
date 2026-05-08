@@ -1,6 +1,6 @@
-# Final I-FLOP Algorithm Package
+# I-FLOP Algorithm Package
 
-This directory is the release package for the final FLOP-aligned and
+This directory is the release package for the FLOP-aligned and
 I-FLOP-envwise methods. It follows the upstream FLOP packaging boundary: the
 release-facing Python API calls a Rust native algorithm core by default, while a
 small Python reference backend remains available for parity checks.
@@ -11,7 +11,7 @@ small Python reference backend remains available for parity checks.
   The public graph output is a CPDAG.
 - `flop_envwise`: FLOP-aligned order search using all environments and no
   intervention-target filtering. The public graph output is a CPDAG.
-- `i_flop_envwise`: the final intervention-aware I-FLOP method using
+- `i_flop_envwise`: the intervention-aware I-FLOP method using
   node-specific effective environments. The public graph output is an I-CPDAG.
 
 Legacy aliases and exploratory score families are not part of this release.
