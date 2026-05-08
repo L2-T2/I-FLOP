@@ -26,7 +26,7 @@ Requirements:
 - Rust toolchain with Cargo for the default native backend
 
 ```bash
-cd final-algorithm
+cd I-FLOP-main
 python -m pip install -e ".[test]"
 ```
 
