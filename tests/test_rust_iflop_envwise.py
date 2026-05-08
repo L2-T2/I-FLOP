@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import _path_setup  # noqa: F401
+
 import numpy as np
 
 from iflop_final.config import GiesScoreConfig, SearchConfig
@@ -32,7 +34,7 @@ def test_rust_fixed_order_matches_python_iflop_envwise() -> None:
 
     assert native.score_key == "i_flop_envwise"
     assert native.order == list(order)
-    assert native.score_metadata["adjacency_type"] == "cpdag"
+    assert native.score_metadata["adjacency_type"] == "i_cpdag"
     assert set(np.unique(native.adjacency)).issubset({0, 1, 2})
     native_dag = np.asarray(native.score_metadata["dag_adjacency"], dtype=int)
     assert np.array_equal(native_dag, python_adjacency)

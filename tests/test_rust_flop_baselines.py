@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import _path_setup  # noqa: F401
+
 import numpy as np
 
 from iflop_final.config import SearchConfig

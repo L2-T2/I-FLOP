@@ -40,6 +40,7 @@ class _CandidateState:
     score: float
     parents: dict[int, set[int]]
     adjacency: np.ndarray
+    local_scores: dict[int, float] = field(default_factory=dict)
     score_vector: tuple[int, int] | None = None
 
 

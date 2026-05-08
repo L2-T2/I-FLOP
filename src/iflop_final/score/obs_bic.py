@@ -11,7 +11,6 @@ from iflop_final.score._linear import (
     bic_cost_terms,
     centered_scatter,
     parent_tuple,
-    residual_variance_ols,
     residual_variance_scatter,
 )
 from iflop_final.score.cache import LocalScoreCache
@@ -26,7 +25,10 @@ class ObsBICScorer:
         self.dataset = dataset
         self.eps = float(eps)
         self.data = np.vstack([dataset.env_data[env] for env in dataset.env_ids])
+        self.scatter = centered_scatter(self.data)
+        self.n_fit = int(self.data.shape[0])
         self.cache = LocalScoreCache()
+        self.scatter_construction_count = 1
 
     @property
     def num_vars(self) -> int:
@@ -36,24 +38,24 @@ class ObsBICScorer:
         pset = parent_tuple(parents)
 
         def compute() -> float:
-            sigma2, _rss = residual_variance_ols(self.data, int(node), pset, self.eps)
-            total, _fit, _penalty = bic_cost_terms(sigma2, self.data.shape[0], self.data.shape[0], len(pset))
+            sigma2 = residual_variance_scatter(self.scatter, self.n_fit, int(node), pset, self.eps)
+            total, _fit, _penalty = bic_cost_terms(sigma2, self.n_fit, self.n_fit, len(pset))
             return total
 
         return self.cache.get_or_compute(self.score_key, int(node), pset, compute)
 
     def local_diagnostics(self, node: int, parents: Iterable[int]) -> dict[str, object]:
         pset = parent_tuple(parents)
-        sigma2, rss = residual_variance_ols(self.data, int(node), pset, self.eps)
-        total, fit, penalty = bic_cost_terms(sigma2, self.data.shape[0], self.data.shape[0], len(pset))
+        sigma2 = residual_variance_scatter(self.scatter, self.n_fit, int(node), pset, self.eps)
+        total, fit, penalty = bic_cost_terms(sigma2, self.n_fit, self.n_fit, len(pset))
         return {
             "score": total,
             "fit_term": fit,
             "penalty": penalty,
             "sigma2": sigma2,
-            "rss": rss,
-            "n_fit": int(self.data.shape[0]),
-            "n_penalty": int(self.data.shape[0]),
+            "rss": float(sigma2 * max(self.n_fit, 1)),
+            "n_fit": self.n_fit,
+            "n_penalty": self.n_fit,
             "parents": pset,
         }
 
@@ -77,6 +79,24 @@ class FlopEnvwiseScorer:
         self.dataset = dataset
         self.eps = float(eps)
         self.cache = LocalScoreCache()
+        self.pooled_scatter = np.zeros((self.num_vars, self.num_vars), dtype=float)
+        self.n_fit = 0
+        self.per_env_terms: list[dict[str, object]] = []
+        for env in self.dataset.env_ids:
+            data = self.dataset.env_data[env]
+            n_env = int(data.shape[0])
+            self.pooled_scatter += centered_scatter(data)
+            self.n_fit += n_env
+            self.per_env_terms.append(
+                {
+                    "env": int(env),
+                    "n": n_env,
+                    "targets": tuple(sorted(self.dataset.intervention_targets[env])),
+                    "included": True,
+                    "inclusion_rule": "all environments; FLOP baseline ignores intervention targets",
+                }
+            )
+        self.scatter_construction_count = len(self.dataset.env_ids)
 
     @property
     def num_vars(self) -> int:
@@ -87,25 +107,8 @@ class FlopEnvwiseScorer:
         return int(self.dataset.total_samples)
 
     def _pooled_terms(self, node: int, parents: tuple[int, ...]) -> tuple[float, int, list[dict[str, object]]]:
-        pooled_scatter = np.zeros((self.num_vars, self.num_vars), dtype=float)
-        n_fit = 0
-        per_env: list[dict[str, object]] = []
-        for env in self.dataset.env_ids:
-            data = self.dataset.env_data[env]
-            n_env = int(data.shape[0])
-            pooled_scatter += centered_scatter(data)
-            n_fit += n_env
-            per_env.append(
-                {
-                    "env": int(env),
-                    "n": n_env,
-                    "targets": tuple(sorted(self.dataset.intervention_targets[env])),
-                    "included": True,
-                    "inclusion_rule": "all environments; FLOP baseline ignores intervention targets",
-                }
-            )
-        sigma2 = residual_variance_scatter(pooled_scatter, n_fit, int(node), parents, self.eps)
-        return float(sigma2), int(n_fit), per_env
+        sigma2 = residual_variance_scatter(self.pooled_scatter, self.n_fit, int(node), parents, self.eps)
+        return float(sigma2), int(self.n_fit), list(self.per_env_terms)
 
     def local_score(self, node: int, parents: Iterable[int]) -> float:
         pset = parent_tuple(parents)

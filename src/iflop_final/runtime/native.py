@@ -19,6 +19,7 @@ import numpy as np
 
 from iflop_final.config import GiesScoreConfig, SearchConfig
 from iflop_final.data.dataset import MultiEnvDataset
+from iflop_final.graph.cpdag import dag_to_icpdag
 from iflop_final.search.state import SearchResult
 
 _BIN_NAME = "iflop_native.exe" if os.name == "nt" else "iflop_native"
@@ -188,7 +189,16 @@ def _invoke_native(
     if completed.returncode != 0:
         detail = completed.stdout.strip() or completed.stderr.strip()
         raise RuntimeError(f"native backend failed: {detail}")
-    return _parse_response(completed.stdout, score_key=key, binary=binary)
+    result = _parse_response(completed.stdout, score_key=key, binary=binary)
+    if key == "i_flop_envwise":
+        dag_adjacency = np.asarray(result.score_metadata["dag_adjacency"], dtype=int)
+        result.adjacency = dag_to_icpdag(dag_adjacency, dataset.intervention_targets)
+        result.score_metadata["adjacency_type"] = "i_cpdag"
+        result.score_metadata["intervention_targets"] = {
+            int(env): tuple(sorted(int(node) for node in targets))
+            for env, targets in dataset.intervention_targets.items()
+        }
+    return result
 
 
 def _serialize_request(

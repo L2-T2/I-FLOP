@@ -22,6 +22,14 @@ The release public surface is intentionally small:
 Each function accepts `backend="rust"`, `backend="python"`, or
 `backend="auto"`. Release users should use the default Rust backend.
 
+Output graph semantics:
+
+- `flop_obs` returns CPDAG adjacency.
+- `flop_envwise` returns CPDAG adjacency.
+- `i_flop_envwise` returns I-CPDAG adjacency.
+- The DAG selected by order search is preserved in
+  `SearchResult.score_metadata["dag_adjacency"]`.
+
 ## Python And Rust Boundary
 
 The native backend is built with Cargo on demand and receives one serialized

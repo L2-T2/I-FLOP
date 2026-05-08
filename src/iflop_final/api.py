@@ -9,6 +9,8 @@ import numpy as np
 
 from iflop_final.config import GiesScoreConfig, SearchConfig
 from iflop_final.data.dataset import MultiEnvDataset
+from iflop_final.graph.cpdag import dag_to_cpdag, dag_to_icpdag
+from iflop_final.graph.dag import adjacency_from_parents
 from iflop_final.score.catalog import available_scores
 from iflop_final.score.gies_bic import GiesBICScorer
 from iflop_final.score.obs_bic import FlopEnvwiseScorer, ObsBICScorer
@@ -47,6 +49,32 @@ def _run_native(
     return run_native_iflop(dataset, score_key=score_key, search_config=search_config)
 
 
+def _with_cpdag_output(result: SearchResult, dataset: MultiEnvDataset) -> SearchResult:
+    dag_adjacency = np.asarray(
+        result.score_metadata.get("dag_adjacency", adjacency_from_parents(result.parents, dataset.num_vars)),
+        dtype=int,
+    )
+    result.adjacency = dag_to_cpdag(dag_adjacency)
+    result.score_metadata["adjacency_type"] = "cpdag"
+    result.score_metadata["dag_adjacency"] = dag_adjacency.tolist()
+    return result
+
+
+def _with_icpdag_output(result: SearchResult, dataset: MultiEnvDataset) -> SearchResult:
+    dag_adjacency = np.asarray(
+        result.score_metadata.get("dag_adjacency", adjacency_from_parents(result.parents, dataset.num_vars)),
+        dtype=int,
+    )
+    result.adjacency = dag_to_icpdag(dag_adjacency, dataset.intervention_targets)
+    result.score_metadata["adjacency_type"] = "i_cpdag"
+    result.score_metadata["dag_adjacency"] = dag_adjacency.tolist()
+    result.score_metadata["intervention_targets"] = {
+        int(env): tuple(sorted(int(node) for node in targets))
+        for env, targets in dataset.intervention_targets.items()
+    }
+    return result
+
+
 def run_flop_obs(
     data: MultiEnvDataset | np.ndarray,
     *,
@@ -63,12 +91,12 @@ def run_flop_obs(
     if _resolve_backend(backend) == "rust":
         return _run_native(dataset, score_key="flop_obs", search_config=search_config)
     scorer = ObsBICScorer(dataset)
-    return run_flop_search(
+    return _with_cpdag_output(run_flop_search(
         scorer,
         score_key="flop_obs",
         config=search_config,
         metadata={"method": "FLOP-aligned observational baseline", "base_score": "obs_bic_only"},
-    )
+    ), dataset)
 
 
 def run_flop_envwise(
@@ -83,7 +111,7 @@ def run_flop_envwise(
     if _resolve_backend(backend) == "rust":
         return _run_native(dataset, score_key="flop_envwise", search_config=search_config)
     scorer = FlopEnvwiseScorer(dataset)
-    return run_flop_search(
+    return _with_cpdag_output(run_flop_search(
         scorer,
         score_key="flop_envwise",
         config=search_config,
@@ -93,7 +121,7 @@ def run_flop_envwise(
             "base_score": "flop_envwise",
             "target_filtering": "none",
         },
-    )
+    ), dataset)
 
 
 def run_iflop_envwise(
@@ -144,7 +172,7 @@ def run_iflop_envwise(
     result.score_key = "i_flop_envwise"
     result.score_metadata["method"] = "I-FLOP-envwise"
     result.score_metadata["base_score"] = "envwise_gies_bic"
-    return result
+    return _with_icpdag_output(result, dataset)
 
 
 def run_iflop(
@@ -180,4 +208,5 @@ def result_summary(result: SearchResult) -> Mapping[str, object]:
         "order": result.order,
         "num_edges": int(result.adjacency.sum()),
         "score_vector": result.score_vector,
+        "adjacency_type": result.score_metadata.get("adjacency_type"),
     }

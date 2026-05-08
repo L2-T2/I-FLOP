@@ -18,11 +18,32 @@ def grow_shrink_parent_set(
     prefix: Iterable[int],
     *,
     atol: float = 1.0e-10,
+    initial_parents: Iterable[int] | None = None,
 ) -> set[int]:
     """Minimize the node-local score over a prefix by greedy grow-shrink."""
 
+    parents, _score = grow_shrink_parent_set_with_score(
+        scorer,
+        node,
+        prefix,
+        atol=atol,
+        initial_parents=initial_parents,
+    )
+    return parents
+
+
+def grow_shrink_parent_set_with_score(
+    scorer: LocalScorer,
+    node: int,
+    prefix: Iterable[int],
+    *,
+    atol: float = 1.0e-10,
+    initial_parents: Iterable[int] | None = None,
+) -> tuple[set[int], float]:
+    """Minimize the node-local score and return both parents and score."""
+
     candidates = set(int(item) for item in prefix if int(item) != int(node))
-    parents: set[int] = set()
+    parents: set[int] = {int(parent) for parent in (initial_parents or ()) if int(parent) in candidates}
     current = float(scorer.local_score(int(node), parents))
     changed = True
     while changed:
@@ -54,7 +75,7 @@ def grow_shrink_parent_set(
             parents.remove(best_remove)
             current = best_remove_score
             changed = True
-    return parents
+    return parents, float(current)
 
 
 def parent_sets_for_order(scorer: LocalScorer, order: Iterable[int], *, atol: float = 1.0e-10) -> dict[int, set[int]]:

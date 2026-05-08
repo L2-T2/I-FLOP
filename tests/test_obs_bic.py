@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import _path_setup  # noqa: F401
+
 import numpy as np
 
 from iflop_final import run_flop_envwise, run_flop_obs
@@ -13,6 +15,8 @@ def test_flop_obs_runs() -> None:
     assert result.adjacency.shape == (4, 4)
     assert sorted(result.order) == [0, 1, 2, 3]
     assert result.score_key == "flop_obs"
+    assert result.score_metadata["adjacency_type"] == "cpdag"
+    assert set(np.unique(result.adjacency)).issubset({0, 1, 2})
     assert isinstance(result.total_score, float)
 
 
@@ -21,6 +25,8 @@ def test_flop_envwise_runs_under_final_name() -> None:
     result = run_flop_envwise(dataset, backend="python")
     assert result.adjacency.shape == (4, 4)
     assert result.score_key == "flop_envwise"
+    assert result.score_metadata["adjacency_type"] == "cpdag"
+    assert set(np.unique(result.adjacency)).issubset({0, 1, 2})
     assert result.score_metadata["target_filtering"] == "none"
 
 

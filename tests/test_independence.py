@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import _path_setup  # noqa: F401
+
 from pathlib import Path
 
 

@@ -10,7 +10,7 @@ from iflop_final.config import SearchConfig
 from iflop_final.graph.dag import adjacency_from_parents
 from iflop_final.search.grow_shrink import LocalScorer, parent_sets_for_order
 from iflop_final.search.ils import default_perturbation_size, perturb_order
-from iflop_final.search.local_search import local_reinsertion_search
+from iflop_final.search.local_search import local_reinsertion_search_incremental
 from iflop_final.search.state import SearchResult, _CandidateState
 
 
@@ -25,13 +25,31 @@ def run_decomposable_order_search(
     p = int(getattr(scorer, "num_vars"))
     rng = np.random.default_rng(cfg.random_seed)
     cache: dict[tuple[int, ...], _CandidateState] = {}
+    search_stats = {
+        "full_order_initializations": 0,
+        "local_search_calls": 0,
+        "local_search_passes": 0,
+        "reinsert_calls": 0,
+        "affected_node_updates": 0,
+    }
 
     def evaluate(order: tuple[int, ...]) -> _CandidateState:
         if order not in cache:
+            search_stats["full_order_initializations"] += 1
             parents = parent_sets_for_order(scorer, order, atol=cfg.atol)
             adjacency = adjacency_from_parents(parents, p)
-            total = float(getattr(scorer, "total_score")(parents))
-            cache[order] = _CandidateState(order=order, score=total, parents=parents, adjacency=adjacency)
+            local_scores = {
+                int(node): float(getattr(scorer, "local_score")(node, parents.get(node, ())))
+                for node in range(p)
+            }
+            total = float(sum(local_scores.values()))
+            cache[order] = _CandidateState(
+                order=order,
+                score=total,
+                parents=parents,
+                adjacency=adjacency,
+                local_scores=local_scores,
+            )
         return cache[order]
 
     initial_orders = [tuple(range(p))]
@@ -42,12 +60,22 @@ def run_decomposable_order_search(
     full_trajectory: list[float] = []
     k = cfg.perturbation_size or default_perturbation_size(p, cfg.dynamic_k_mode)
     for start in initial_orders:
-        local_state, trajectory = local_reinsertion_search(start, evaluate, cfg)
+        start_state = evaluate(start)
+        local_state, trajectory, stats = local_reinsertion_search_incremental(start_state, scorer, cfg)
+        search_stats["local_search_calls"] += 1
+        search_stats["local_search_passes"] += stats["local_search_passes"]
+        search_stats["reinsert_calls"] += stats["reinsert_calls"]
+        search_stats["affected_node_updates"] += stats["affected_node_updates"]
         full_trajectory.extend(trajectory)
         current = local_state
         for _ in range(max(int(cfg.ils_restarts), 1)):
             perturbed = perturb_order(current.order, rng, k)
-            candidate, trajectory = local_reinsertion_search(perturbed, evaluate, cfg)
+            perturbed_state = evaluate(perturbed)
+            candidate, trajectory, stats = local_reinsertion_search_incremental(perturbed_state, scorer, cfg)
+            search_stats["local_search_calls"] += 1
+            search_stats["local_search_passes"] += stats["local_search_passes"]
+            search_stats["reinsert_calls"] += stats["reinsert_calls"]
+            search_stats["affected_node_updates"] += stats["affected_node_updates"]
             full_trajectory.extend(trajectory)
             if candidate.score < current.score - cfg.atol:
                 current = candidate
@@ -62,8 +90,14 @@ def run_decomposable_order_search(
             for node in range(p)
         }
     score_metadata["cache_size"] = len(cache)
+    score_metadata["search_stats"] = dict(search_stats)
+    if hasattr(getattr(scorer, "cache", None), "stats"):
+        score_metadata["score_cache_stats"] = getattr(scorer, "cache").stats()
+    if hasattr(scorer, "scatter_construction_count"):
+        score_metadata["scatter_construction_count"] = int(getattr(scorer, "scatter_construction_count"))
+    best_adjacency = adjacency_from_parents(best.parents, p)
     return SearchResult(
-        adjacency=best.adjacency,
+        adjacency=best_adjacency,
         order=list(best.order),
         parents=best.parents,
         total_score=float(best.score),

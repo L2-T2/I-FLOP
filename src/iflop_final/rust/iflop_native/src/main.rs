@@ -660,7 +660,7 @@ fn run_main() -> NativeResult<()> {
     }
     let text = fs::read_to_string(&args[1]).map_err(|err| NativeError(err.to_string()))?;
     let request = parse_request(&text)?;
-    let result = if request.mode == "eval_order" {
+    let mut result = if request.mode == "eval_order" {
         let order = request
             .order
             .clone()
@@ -671,8 +671,16 @@ fn run_main() -> NativeResult<()> {
     } else {
         return Err(NativeError(format!("unknown mode {}", request.mode)));
     };
+    apply_output_semantics(&request, &mut result);
     print_candidate(&request.score_key, &result);
     Ok(())
+}
+
+fn apply_output_semantics(request: &Request, candidate: &mut Candidate) {
+    if request.score_key == "i_flop_envwise" {
+        candidate.adjacency = icpdag_adjacency(&candidate.dag_adjacency, &request.dataset);
+        candidate.adjacency_type = "i_cpdag".to_string();
+    }
 }
 
 fn evaluate_order_request(request: &Request, order: &[usize]) -> NativeResult<Candidate> {
@@ -1793,6 +1801,132 @@ fn cpdag_adjacency_from_parents(parents: &[Vec<usize>], p: usize) -> Vec<Vec<u8>
         }
     }
     cpdag
+}
+
+fn icpdag_adjacency(dag: &[Vec<u8>], dataset: &Dataset) -> Vec<Vec<u8>> {
+    let p = dataset.p;
+    let mut parents = vec![Vec::<usize>::new(); p];
+    for parent in 0..p {
+        for child in 0..p {
+            if dag[parent][child] != 0 {
+                parents[child].push(parent);
+            }
+        }
+    }
+    let mut graph = cpdag_adjacency_from_parents(&parents, p);
+    for env in &dataset.envs {
+        if env.targets.is_empty() {
+            continue;
+        }
+        for u in 0..p {
+            for v in (u + 1)..p {
+                let u_targeted = env.targets.contains(&u);
+                let v_targeted = env.targets.contains(&v);
+                if has_undirected(&graph, u, v) && u_targeted != v_targeted {
+                    orient_as_dag(&mut graph, dag, u, v);
+                }
+            }
+        }
+    }
+    apply_meek_closure(&mut graph);
+    graph
+}
+
+fn orient_as_dag(graph: &mut [Vec<u8>], dag: &[Vec<u8>], u: usize, v: usize) -> bool {
+    if dag[u][v] != 0 {
+        graph[u][v] = 1;
+        graph[v][u] = 0;
+        true
+    } else if dag[v][u] != 0 {
+        graph[v][u] = 1;
+        graph[u][v] = 0;
+        true
+    } else {
+        false
+    }
+}
+
+fn has_any_edge(graph: &[Vec<u8>], u: usize, v: usize) -> bool {
+    graph[u][v] != 0 || graph[v][u] != 0
+}
+
+fn has_directed(graph: &[Vec<u8>], u: usize, v: usize) -> bool {
+    graph[u][v] == 1 && graph[v][u] == 0
+}
+
+fn has_undirected(graph: &[Vec<u8>], u: usize, v: usize) -> bool {
+    graph[u][v] == 2 && graph[v][u] == 2
+}
+
+fn orient_partial(graph: &mut [Vec<u8>], u: usize, v: usize) -> bool {
+    if !has_undirected(graph, u, v) {
+        return false;
+    }
+    graph[u][v] = 1;
+    graph[v][u] = 0;
+    true
+}
+
+fn apply_meek_closure(graph: &mut [Vec<u8>]) {
+    let p = graph.len();
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for a in 0..p {
+            for b in 0..p {
+                if !has_directed(graph, a, b) {
+                    continue;
+                }
+                for c in 0..p {
+                    if c == a || c == b {
+                        continue;
+                    }
+                    if has_undirected(graph, b, c) && !has_any_edge(graph, a, c) {
+                        changed = orient_partial(graph, b, c) || changed;
+                    }
+                }
+            }
+        }
+
+        for a in 0..p {
+            for b in 0..p {
+                if !has_undirected(graph, a, b) {
+                    continue;
+                }
+                for c in 0..p {
+                    if c == a || c == b {
+                        continue;
+                    }
+                    if has_directed(graph, a, c) && has_directed(graph, c, b) {
+                        changed = orient_partial(graph, a, b) || changed;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for a in 0..p {
+            for b in 0..p {
+                if !has_undirected(graph, a, b) {
+                    continue;
+                }
+                let mut candidates = Vec::<usize>::new();
+                for c in 0..p {
+                    if c != a && c != b && has_undirected(graph, a, c) && has_directed(graph, c, b) {
+                        candidates.push(c);
+                    }
+                }
+                'outer: for idx in 0..candidates.len() {
+                    for jdx in (idx + 1)..candidates.len() {
+                        if !has_any_edge(graph, candidates[idx], candidates[jdx]) {
+                            changed = orient_partial(graph, a, b) || changed;
+                            break 'outer;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn topological_ordering_from_parents(parents: &[Vec<usize>], p: usize) -> Vec<usize> {

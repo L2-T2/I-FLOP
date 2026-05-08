@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import _path_setup  # noqa: F401
+
 from iflop_final import available_scores, run_iflop
 from iflop_final.data.simulation import generate_linear_gaussian_dataset
 

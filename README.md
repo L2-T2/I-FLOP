@@ -8,10 +8,11 @@ small Python reference backend remains available for parity checks.
 ## Supported Methods
 
 - `flop_obs`: FLOP-aligned order search using observational environments only.
+  The public graph output is a CPDAG.
 - `flop_envwise`: FLOP-aligned order search using all environments and no
-  intervention-target filtering.
+  intervention-target filtering. The public graph output is a CPDAG.
 - `i_flop_envwise`: the final intervention-aware I-FLOP method using
-  node-specific effective environments.
+  node-specific effective environments. The public graph output is an I-CPDAG.
 
 Legacy aliases and exploratory score families are not part of this release.
 The package intentionally does not ship an R interface.
@@ -28,6 +29,11 @@ Requirements:
 cd final-algorithm
 python -m pip install -e ".[test]"
 ```
+
+For a GitHub source zip, unzip it, enter the repository root, and run the same
+commands. The tests also include a local `src/` path bootstrap so
+`python tests/test_gies_bic.py` can import the package before installation,
+but `python -m pytest -q` is the recommended test entry.
 
 ## Quick Smoke Tests
 
@@ -75,8 +81,13 @@ All public methods return `SearchResult` with:
 - `score_key`: one of `flop_obs`, `flop_envwise`, `i_flop_envwise`.
 - `score_metadata`: score diagnostics and backend metadata.
 
-The package estimates DAGs directly. CPDAG helpers are only used internally for
-native parity metadata.
+Graph output semantics are explicit:
+
+- `flop_obs` and `flop_envwise` return a CPDAG in `adjacency`.
+- `i_flop_envwise` returns an I-CPDAG in `adjacency`, orienting edges that are
+  identifiable from intervention targets and applying conservative Meek closure.
+- All methods retain the learned DAG adjacency in
+  `score_metadata["dag_adjacency"]` for debugging and backend parity checks.
 
 ## Release Notes
 

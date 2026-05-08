@@ -34,6 +34,9 @@ class GiesBICScorer:
         self.variant = "envwise"
         self.score_key = "i_flop_envwise"
         self.cache = LocalScoreCache()
+        self.env_scatters = {env: centered_scatter(data) for env, data in self.dataset.env_data.items()}
+        self._node_terms = {node: self._build_node_terms(node) for node in range(self.dataset.num_vars)}
+        self.scatter_construction_count = len(self.env_scatters)
 
     @property
     def num_vars(self) -> int:
@@ -46,7 +49,7 @@ class GiesBICScorer:
         return [(env, self.dataset.env_data[env]) for env in envs]
 
     def _effective_n(self, node: int) -> int:
-        return int(sum(data.shape[0] for _env, data in self._effective_arrays(node)))
+        return int(self._node_terms[int(node)]["n_fit"])
 
     def _penalty_n(self, node: int) -> int:
         mode = self.config.penalty_sample_mode
@@ -54,10 +57,28 @@ class GiesBICScorer:
         if mode == "total":
             return self.dataset.total_samples
         if mode == "effective":
-            return int(sum(data.shape[0] for _env, data in arrays))
+            return int(self._node_terms[int(node)]["n_fit"])
         if mode == "max_env":
             return int(max(data.shape[0] for _env, data in arrays))
         raise ValueError(f"unknown penalty_sample_mode: {mode}")
+
+    def _build_node_terms(self, node: int) -> dict[str, object]:
+        arrays = self._effective_arrays(node)
+        pooled_scatter = np.zeros((self.num_vars, self.num_vars), dtype=float)
+        n_fit = 0
+        per_env: list[dict[str, int]] = []
+        for env, data in arrays:
+            pooled_scatter += self.env_scatters[env]
+            n_env = int(data.shape[0])
+            n_fit += n_env
+            per_env.append({"env": int(env), "n": n_env})
+        return {
+            "arrays": arrays,
+            "pooled_scatter": pooled_scatter,
+            "n_fit": int(n_fit),
+            "per_env": per_env,
+            "effective_envs": self.dataset.effective_envs(node),
+        }
 
     def local_score(self, node: int, parents: Iterable[int]) -> float:
         pset = parent_tuple(parents)
@@ -76,12 +97,10 @@ class GiesBICScorer:
         return float(sum(self.local_score(node, parents.get(node, ())) for node in range(self.num_vars)))
 
     def _envwise_diagnostics(self, node: int, parents: tuple[int, ...]) -> dict[str, object]:
-        arrays = self._effective_arrays(node)
-        pooled_scatter = np.zeros((self.num_vars, self.num_vars), dtype=float)
-        n_fit = 0
-        for _env, data in arrays:
-            pooled_scatter += centered_scatter(data)
-            n_fit += int(data.shape[0])
+        terms = self._node_terms[int(node)]
+        arrays = terms["arrays"]
+        pooled_scatter = np.asarray(terms["pooled_scatter"], dtype=float)
+        n_fit = int(terms["n_fit"])
         if self.config.envwise_residual_mode == "pooled_covariance":
             sigma2 = residual_variance_scatter(pooled_scatter, n_fit, node, parents, self.config.eps)
             n_penalty = self._penalty_n(node)
@@ -101,10 +120,10 @@ class GiesBICScorer:
                 "n_fit": n_fit,
                 "n_penalty": n_penalty,
                 "parents": parents,
-                "effective_envs": self.dataset.effective_envs(node),
+                "effective_envs": terms["effective_envs"],
                 "variant": self.config.variant,
                 "coefficient_pooling": "pooled_covariance_across_effective_environments",
-                "per_env": [{"env": int(env), "n": int(data.shape[0])} for env, data in arrays],
+                "per_env": list(terms["per_env"]),
             }
         if self.config.envwise_residual_mode != "env_residuals":
             raise ValueError(f"unknown envwise_residual_mode: {self.config.envwise_residual_mode}")
@@ -121,7 +140,7 @@ class GiesBICScorer:
         fit = 0.0
         per_env: list[dict[str, float | int]] = []
         for env, data in arrays:
-            scatter = centered_scatter(data)
+            scatter = self.env_scatters[int(env)]
             n_env = int(data.shape[0])
             s_yy = float(scatter[node, node])
             if parents:
