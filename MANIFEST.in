@@ -1,10 +1,9 @@
 include README.md LICENSE CHANGELOG.md CITATION.cff CONTRIBUTING.md SECURITY.md
 recursive-include docs *.md
 recursive-include examples *.py
-recursive-include rust/iflop_native Cargo.toml Cargo.lock
-recursive-include rust/iflop_native/src *.rs
-recursive-include src/iflop_final/rust/iflop_native Cargo.toml Cargo.lock
-recursive-include src/iflop_final/rust/iflop_native/src *.rs
+recursive-include tests *.py
+recursive-include src/iflop/rust Cargo.toml Cargo.lock
+recursive-include src/iflop/rust/src *.rs
 recursive-exclude * __pycache__
 recursive-exclude * *.py[cod]
 recursive-exclude * target

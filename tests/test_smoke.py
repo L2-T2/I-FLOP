@@ -4,7 +4,7 @@ import _path_setup  # noqa: F401
 
 import numpy as np
 
-from iflop_final.data.dataset import MultiEnvDataset
+from iflop.data.dataset import MultiEnvDataset
 
 
 def test_dataset_validation() -> None:

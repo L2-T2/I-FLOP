@@ -4,19 +4,19 @@ import _path_setup  # noqa: F401
 
 import numpy as np
 
-from iflop_final import run_iflop_envwise
-from iflop_final.config import SearchConfig
-from iflop_final.data.simulation import generate_linear_gaussian_dataset
-from iflop_final.graph.dag import adjacency_from_parents, is_acyclic
-from iflop_final.score.gies_bic import GiesBICScorer
-from iflop_final.search.grow_shrink import parent_sets_for_order
-from iflop_final.search.ils import default_perturbation_size, perturb_order
-from iflop_final.search.local_search import local_reinsertion_search
-from iflop_final.search.state import _CandidateState
+from iflop import run_iflop
+from iflop.config import SearchConfig
+from iflop.data.simulation import generate_linear_gaussian_dataset
+from iflop.graph.dag import adjacency_from_parents, is_acyclic
+from iflop.score.iflop_bic import IFlopBICScorer
+from iflop.search.grow_shrink import parent_sets_for_order
+from iflop.search.ils import default_perturbation_size, perturb_order
+from iflop.search.local_search import local_reinsertion_search
+from iflop.search.state import _CandidateState
 
 
-def _legacy_full_recompute_score(dataset, config: SearchConfig) -> _CandidateState:
-    scorer = GiesBICScorer(dataset)
+def _reference_full_recompute_score(dataset, config: SearchConfig) -> _CandidateState:
+    scorer = IFlopBICScorer(dataset)
     p = dataset.num_vars
     rng = np.random.default_rng(config.random_seed)
     cache: dict[tuple[int, ...], _CandidateState] = {}
@@ -49,21 +49,21 @@ def _legacy_full_recompute_score(dataset, config: SearchConfig) -> _CandidateSta
     return best
 
 
-def test_optimized_search_matches_legacy_full_recompute_on_small_case() -> None:
+def test_optimized_search_matches_reference_full_recompute_on_small_case() -> None:
     dataset = generate_linear_gaussian_dataset(num_vars=4, samples_per_env=35, num_interventions=2, seed=601)
     config = SearchConfig(ils_restarts=2, random_seed=17, max_sweeps=3)
 
-    optimized = run_iflop_envwise(dataset, search_config=config, backend="python")
-    legacy = _legacy_full_recompute_score(dataset, config)
+    optimized = run_iflop(dataset, search_config=config, backend="python")
+    reference = _reference_full_recompute_score(dataset, config)
 
-    assert np.isclose(optimized.total_score, legacy.score, rtol=1.0e-10, atol=1.0e-10)
-    assert optimized.order == list(legacy.order)
-    assert optimized.parents == legacy.parents
+    assert np.isclose(optimized.total_score, reference.score, rtol=1.0e-10, atol=1.0e-10)
+    assert optimized.order == list(reference.order)
+    assert optimized.parents == reference.parents
 
 
 def test_parent_sets_remain_valid_prefixes_and_output_is_acyclic() -> None:
     dataset = generate_linear_gaussian_dataset(num_vars=5, samples_per_env=30, num_interventions=2, seed=602)
-    result = run_iflop_envwise(dataset, search_config=SearchConfig(ils_restarts=2, random_seed=3), backend="python")
+    result = run_iflop(dataset, search_config=SearchConfig(ils_restarts=2, random_seed=3), backend="python")
     rank = {node: idx for idx, node in enumerate(result.order)}
     for child, parents in result.parents.items():
         assert all(rank[parent] < rank[child] for parent in parents)
