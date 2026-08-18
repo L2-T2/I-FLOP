@@ -4,14 +4,14 @@ import _path_setup  # noqa: F401
 
 import numpy as np
 
-from iflop_final.data.simulation import generate_linear_gaussian_dataset
-from iflop_final.score.gies_bic import GiesBICScorer
-from iflop_final.score.obs_bic import FlopEnvwiseScorer
+from iflop.data.simulation import generate_linear_gaussian_dataset
+from iflop.score.iflop_bic import IFlopBICScorer
+from iflop.score.obs_bic import FlopEnvwiseScorer
 
 
 def test_local_score_cache_returns_same_value_as_uncached() -> None:
     dataset = generate_linear_gaussian_dataset(num_vars=4, samples_per_env=40, num_interventions=2, seed=401)
-    scorer = GiesBICScorer(dataset)
+    scorer = IFlopBICScorer(dataset)
     parents = (0, 2)
 
     cached = scorer.local_score(3, parents)

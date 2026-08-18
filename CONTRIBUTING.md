@@ -5,13 +5,13 @@ method set:
 
 - `flop_obs`
 - `flop_envwise`
-- `i_flop_envwise`
+- `iflop`
 
 Before submitting changes, run:
 
 ```bash
 python -m pytest -q
-cd rust/iflop_native
+cd src/iflop/rust
 cargo test
 ```
 

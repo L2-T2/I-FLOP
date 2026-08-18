@@ -4,9 +4,9 @@ import _path_setup  # noqa: F401
 
 import numpy as np
 
-from iflop_final import run_flop_envwise, run_flop_obs
-from iflop_final.data.simulation import generate_linear_gaussian_dataset
-from iflop_final.score.obs_bic import FlopEnvwiseScorer, ObsBICScorer
+from iflop import run_flop_envwise, run_flop_obs
+from iflop.data.simulation import generate_linear_gaussian_dataset
+from iflop.score.obs_bic import FlopEnvwiseScorer, ObsBICScorer
 
 
 def test_flop_obs_runs() -> None:
@@ -20,7 +20,7 @@ def test_flop_obs_runs() -> None:
     assert isinstance(result.total_score, float)
 
 
-def test_flop_envwise_runs_under_final_name() -> None:
+def test_flop_envwise_runs() -> None:
     dataset = generate_linear_gaussian_dataset(num_vars=4, samples_per_env=40, num_interventions=3, seed=23)
     result = run_flop_envwise(dataset, backend="python")
     assert result.adjacency.shape == (4, 4)

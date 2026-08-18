@@ -1,7 +1,8 @@
 cff-version: 1.2.0
 title: "I-FLOP Algorithm Package"
-version: "0.1.0"
+version: "1.0.0"
+date-released: "2026-08-18"
 message: "If you use this software, please cite the corresponding I-FLOP release and the FLOP work it extends."
 authors:
-  - name: "I-FLOP authors"
+  - name: "Liuting Chen, Alex Markham"
 license: "MPL-2.0"
